@@ -23,6 +23,8 @@ use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\SerializerAwareInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Tests\Fixtures\DeepObjectPopulateChildDummy;
+use Symfony\Component\Serializer\Tests\Fixtures\DeepObjectPopulateParentDummy;
 
 class AbstractObjectNormalizerTest extends TestCase
 {
@@ -170,6 +172,28 @@ class AbstractObjectNormalizerTest extends TestCase
         $normalizer = new ObjectNormalizer();
         $result = $normalizer->normalize($dummy, null, [AbstractObjectNormalizer::SKIP_NULL_VALUES => true]);
         $this->assertSame(['bar' => 'present'], $result);
+    }
+
+    public function testDeepObjectToPopulate()
+    {
+        $child = new DeepObjectPopulateChildDummy();
+        $child->bar = 'bar-old';
+        $child->foo = 'foo-old';
+
+        $parent = new DeepObjectPopulateParentDummy();
+
+        $parent->setChild($child);
+
+        $context = [
+            AbstractObjectNormalizer::OBJECT_TO_POPULATE => $parent,
+            AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true
+        ];
+
+        $normalizer = new ObjectNormalizer();
+        $normalizer->denormalize(['child' => [ 'bar' => 'bar-new']], 'Symfony\Component\Serializer\Tests\Fixtures\DeepObjectPopulateParentDummy', null, $context);
+
+        $this->assertSame('bar-new', $parent->getChild()->bar);
+        $this->assertSame('foo-old', $parent->getChild()->foo);
     }
 }
 
